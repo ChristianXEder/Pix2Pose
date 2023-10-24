@@ -131,6 +131,12 @@ def get_dataset(cfg,dataset,train=True,incl_param=False,eval=False,eval_model=Fa
         model_dir = bop_dataset_dir+"/models"+postfix_model
         model_dir  = "/home/kiru/media/hdd_linux/PoseDataset/hinterstoisser/model_eval"
         model_scale=0.001
+    elif(dataset=='deform_dataset'):
+        bop_dataset_dir = os.path.join(bop_dir,"deform_dataset")
+        test_dir = bop_dataset_dir+"/test"
+        train_dir = bop_dataset_dir+"/train_pbr"
+        model_dir = bop_dataset_dir+"/models"
+        model_scale=1
     
     model_info = inout.load_json(os.path.join(model_dir,"models_info.json"))
     if(dataset=='ycbv'):
@@ -149,6 +155,7 @@ def get_dataset(cfg,dataset,train=True,incl_param=False,eval=False,eval_model=Fa
     params=[]
     model_ids = []
     for model_id in model_info.keys():
+        model_id = model_id.split("_")[1]
         ply_fn = os.path.join(model_dir,"obj_{:06d}.ply".format(int(model_id)))
         if(os.path.exists(ply_fn)): model_ids.append(int(model_id)) #add model id only if the model.ply file exists
 

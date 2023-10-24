@@ -126,7 +126,7 @@ class pix2pose():
             #[todo] predict for 3 images at the same time and pnp ransac for 3 images, decide using the no. of inliers
 
         if(len(input_refined)<=0):
-            #print("not valid output from the first stage")
+            print("not valid output from the first stage")
             return img_pred,-1,-1,-1,-1,np.array([v1,v2,u1,u2],np.int)
         
         decode,prob = self.generator_train.predict( np.array(input_refined))
@@ -161,6 +161,8 @@ class pix2pose():
             plt.imshow(image_array)
             plt.title('2D3D Corr Map')
             plt.show()
+
+            print(self.obj_scale)
 
             # Save the image with a random filename
             # random_filename = str(random.randint(100000, 999999))  # Generating a random 6-digit number
@@ -212,7 +214,7 @@ class pix2pose():
                     max_inlier = n_inliers
                     #frac of max_inlier
         if(max_inlier==-1):
-            #print("not valid max_inlier at the second stage")
+            print("not valid max_inlier at the second stage")
             return img_pred,-1,-1,-1,-1,np.array([v1,v2,u1,u2],np.int)
         else:
             return img_pred_f.astype(np.uint8),valid_mask_full,rot_pred,tra_pred,max_inlier/n_init_mask,np.array([v1,v2,u1,u2],np.int)        

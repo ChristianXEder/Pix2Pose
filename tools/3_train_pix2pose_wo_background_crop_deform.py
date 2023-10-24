@@ -1,10 +1,9 @@
 import os,sys
 import transforms3d as tf3d
 from math import radians
-from matplotlib import pyplot as plt
 
 if(len(sys.argv)!=6):
-    print("python3 tools/3_train_pix2pose.py <gpu_id> <cfg_fn> <dataset> <obj_id> <dir_to_background_imgs>")
+    print("python3 tools/3_train_pix2pose_wo_background_crop.py <gpu_id> <cfg_fn> <dataset> <obj_id> <augmentation probability>")
     sys.exit()
 
 gpu_id = sys.argv[1]
@@ -36,7 +35,7 @@ from keras.models import Model
 from keras.utils import GeneratorEnqueuer
 from keras.layers import Layer
 
-from pix2pose_util import data_io as dataio
+from pix2pose_util import data_io_no_background as dataio
 from tools import bop_io
 
 configuration = tf.compat.v1.ConfigProto()
@@ -77,7 +76,6 @@ loss_weights = [100,1]
 train_gen_first = False
 load_recent_weight = True
 
-
 dataset=sys.argv[3]
 
 cfg_fn = sys.argv[2] #"cfg/cfg_bop2019.json"
@@ -87,16 +85,20 @@ bop_dir,source_dir,model_plys,model_info,model_ids,rgb_files,depth_files,mask_fi
 im_width,im_height =cam_param_global['im_size'] 
 weight_prefix = "pix2pose" 
 obj_id = int(sys.argv[4]) #identical to the number for the ply file.
-weight_dir = bop_dir+"/pix2pose_weights/{:02d}".format(obj_id)
+weight_dir = bop_dir + "/p_" + sys.argv[5] + "_pix2pose_weights_no_bg/{:02d}".format(obj_id)
 if not(os.path.exists(weight_dir)):
         os.makedirs(weight_dir)
-back_dir = sys.argv[5]
 data_dir = bop_dir+"/train_xyz/{:02d}".format(obj_id)
 
-batch_size=50
-datagenerator = dataio.data_generator(data_dir,back_dir,batch_size=batch_size,res_x=im_width,res_y=im_height)
+batch_size=25
+augmentation_prob=float(sys.argv[5])
+print()
+print(augmentation_prob)
+print()
+datagenerator = dataio.data_generator(data_dir,batch_size=batch_size,res_x=im_width,res_y=im_height,prob=augmentation_prob)
 
-m_info = model_info['{}'.format(int(obj_id.split("_")[1]))]
+print(obj_id)
+m_info = model_info['obj_{:06}'.format(int(obj_id))]
 keys = m_info.keys()
 sym_pool=[]
 sym_cont = False
@@ -122,8 +124,9 @@ if('backbone' in cfg.keys()):
 if(backbone=='resnet50'):
     generator_train = ae.aemodel_unet_resnet50(p=1.0)
 else:
+    #generator_train = ae.aemodel_unet_prob(p=1.0)
+    print("we use the aemodel variant!")
     generator_train = ae.aemodel_unet_prob(p=1.0)
-    
 
 discriminator = ae.DCGAN_discriminator()
 imsize=128
@@ -168,7 +171,7 @@ if load_recent_weight:
 if(recent_epoch!=-1):
     epoch = recent_epoch
     train_gen_first=False
-max_epoch=10
+max_epoch=20
 if(max_epoch==10): #lr-shcedule used in the bop challenge
     lr_schedule=[1E-3,1E-3,1E-3,1E-3,1E-3,
                 1E-3,1E-3,1E-4,1E-4,1E-4,
@@ -179,17 +182,31 @@ elif(max_epoch==20): #lr-shcedule used in the paper
                 1E-3,1E-3,1E-3,1E-3,1E-4,
                 1E-4,1E-4,1E-4,1E-4,1E-4,
                 1E-4,1E-4,1E-4,1E-4,1E-5]
+elif(max_epoch==40): #lr-shcedule used in the paper
+    lr_schedule=[1E-3,1E-3,1E-3,1E-3,1E-3,
+                1E-3,1E-3,1E-3,1E-3,1E-4,
+                1E-4,1E-4,1E-4,1E-4,1E-4,
+                1E-4,1E-4,1E-4,1E-4,1E-4,
+                1E-4,1E-4,1E-4,1E-4,1E-4,
+                1E-4,1E-4,1E-4,1E-4,1E-4,                
+                1E-4,1E-4,1E-4,1E-4,1E-4,  
+                1E-4,1E-4,1E-4,1E-4,1E-4]
 
 dcgan.compile(loss=[dummy_loss, 'binary_crossentropy'],
                 loss_weights=loss_weights ,optimizer=optimizer_dcgan)
 dcgan.summary()
 
 discriminator.trainable = True
+
 discriminator.compile(loss=['binary_crossentropy'],optimizer=optimizer_disc)
+print("Discriminator summary:")
 discriminator.summary()
+print()
+print("Generator Summary:")
+generator_train.summary()
 
 N_data=datagenerator.n_data
-batch_size=50
+batch_size=25
 batch_counter=0
 n_batch_per_epoch= min(N_data/batch_size*10,3000) #check point: every 10 epoch
 step_lr_drop=5
@@ -211,6 +228,8 @@ iter_ = fed.get()
 
 zero_target = np.zeros((batch_size))
 for X_src,X_tgt,disc_tgt,prob_gt in iter_:
+    start_time = time.time()
+    print("aug_prob: ", augmentation_prob)
     discriminator.trainable = True
 
     X_disc, y_disc = get_disc_batch(X_src,X_tgt,generator_train,0,
@@ -231,10 +250,15 @@ for X_src,X_tgt,disc_tgt,prob_gt in iter_:
     gen_losses.append(dcgan_loss[2])
 
     mean_loss = np.mean(np.array(recont_losses))
-    print("Epoch{:02d}-Iter{:03d}/{:03d}:Mean-[{:.5f}], Disc-[{:.4f}], Recon-[{:.4f}], Gen-[{:.4f}]],lr={:.6f}".format(epoch,batch_counter,int(n_batch_per_epoch),mean_loss,disc_loss,dcgan_loss[1],dcgan_loss[2],lr_current))
-    
+
+    end_time = time.time()
+
+    iteration_time = end_time - start_time
+
+    print("Epoch{:02d}-Iter{:03d}/{:03d}:Mean-[{:.5f}], Disc-[{:.4f}], Recon-[{:.4f}], Gen-[{:.4f}]], lr={:.6f}, time={:.4f} s".format(epoch,batch_counter,int(n_batch_per_epoch),mean_loss,disc_loss,dcgan_loss[1],dcgan_loss[2],lr_current,iteration_time))
+
     if batch_counter%100==0: 
-        imgfn = weight_dir+"/val_img/"+weight_prefix+"_{:02d}.png".format(batch_counter)
+        imgfn = weight_dir+"/val_img/"+weight_prefix+"_{:02d}.jpg".format(batch_counter+epoch*100000)
         if not(os.path.exists(weight_dir+"/val_img/")):
             os.makedirs(weight_dir+"/val_img/")
 
@@ -271,9 +295,10 @@ for X_src,X_tgt,disc_tgt,prob_gt in iter_:
         
         gen_images,probs = generator_train.predict(X_src)
         
-        lr_current=lr_schedule[epoch]
-        K.set_value(discriminator.optimizer.lr, lr_current)
-        K.set_value(dcgan.optimizer.lr, lr_current)        
+        if epoch < len(lr_schedule):
+            lr_current=lr_schedule[epoch]
+            K.set_value(discriminator.optimizer.lr, lr_current)
+            K.set_value(dcgan.optimizer.lr, lr_current)        
 
     batch_counter+=1
     if(epoch>max_epoch): 

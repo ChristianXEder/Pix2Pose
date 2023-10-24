@@ -1,0 +1,18 @@
+{
+  "backbone":"resnet50",
+  "dataset_dir": "/dataset",
+  "dataset_names": ["deform_dataset"],
+  "detection_pipeline": "rcnn",
+  "detection_file": "scene_gt_bb_dummy.json",
+  "path_to_detection_pipeline": "/Pix2Pose/Mask_RCNN", 
+  "path_to_output": "/dataset/deform_dataset/pix2pose_results",
+  "outlier_th":[0.15,0.25,0.35],
+  "inlier_th":0.15,
+  "norm_factor_fn":"norm_factor.json",
+  "background_imgs_for_training":"/dataset/train2017/",
+  "score_type":2,
+  "task_type":2,
+  "cand_factor":2,
+  "test_target":"test_targets_deform",
+  "target_obj": [1, 405, 809, 1213, 1617, 2021, 2425]
+}

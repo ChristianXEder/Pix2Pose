@@ -62,7 +62,7 @@ weight_dir = bop_dir+"/pix2pose_weights_no_bg/{:02d}".format(obj_id)
 if not(os.path.exists(weight_dir)):
         os.makedirs(weight_dir)
 
-m_info = model_info['{}'.format(obj_id)]
+m_info = model_info['obj_{:06}'.format(obj_id)]
 keys = m_info.keys()
 sym_pool=[]
 sym_cont = False
