@@ -1,22 +1,22 @@
-
- ## This fork has the following modifications:
+## This fork has the following modifications:
  - the random cropping and pasting onto backgrounds was removed
  - instead, we crop the objects including the original backgrounds from the PBR scenes and enlarge the bounding boxes to include some more background
- - for evaluation, either all models can be evaluated at once (takes huge GPU RAM space), OR evaluate each object independently and append the csv files at the end
+ - instead of loading all PLY files at once, only the requiered once are loaded
+ - cfg/deform.json added
  
  # use the modified pipeline as follows:
- - generate the XYZ -> RGB colored ply files: `python3 tools/2_1_ply_file_to_3d_coord_model_custom.py cfg/cfg_bop2020_rgb_custom.json lmo`
- - render the xyz maps: `python3 tools/2_2_render_pix2pose_training_custom.py cfg/cfg_bop2020_rgb_custom.json lmo`
- - train Pix2Pose: `python3 tools/3_train_pix2pose_wo_background_crop.py 0 cfg/cfg_bop2020_rgb_custom.json lmo 1`
- - you can also use: `bash train_lmo.sh` to train all models after one another
- - (optional): if you dont have a `inference_resnet_model.hdf5` file but only the "raw" discriminator and generator files you can use `python3 tools/4_converter_working.py 0 cfg/cfg_bop2020_rgb_custom.json lmo 1` to convert to the `inference_resnet_model.hdf5` file
- - evaluation, can be done for single objects (existing detection results file), for all objects with detection results file or for all objects with MASKRCNN
- - evaluation for single object + detection results file: 
- - `python3 tools/5_evaluation_bop_from_file_single_obj.py 0 cfg/cfg_bop2020_rgb_det_file.json lmo 1`
- - evaluation for multi object + detection results file: 
- - `python3 tools/5_evaluation_bop_from_file.py 0 cfg/cfg_bop2020_rgb_det_file.json lmo`
- - evaluation for multi object + MASKRCNN: 
- - `python3 tools/5_evaluation_bop_custom.py 0 cfg/cfg_bop2020_rgb_custom.json lmo`
+ - generate the XYZ -> RGB colored ply files: `python3 tools/2_1_ply_file_to_3d_coord_model_custom.py cfg/deform.json.json deform_dataset`
+ - train Pix2Pose: `python3 tools/3_train_pix2pose_wo_background_crop_deform.py cfg/deform.json deform_dataset 1 1.0`
+ - you can also use: `bash train_deform.sh` to train all models after one another
+ - (optional): if you dont have a `inference_resnet_model.hdf5` file but only the "raw" discriminator and generator files you can use `python3 tools/4_converter_working.py 0 cfg/deform.json deform_dataset 1` to convert to the `inference_resnet_model.hdf5` file
+ -  Evaluation for rotation and translation error:
+ - `python3 charts/calc_rot_trans_error.py 0 cfg/deform.json deform_dataset`
+ - `python3 charts/create_chart_rot_trans_error.py`
+ -  Evaluation for UV prediction error:
+ - `python3 charts/calc_uv.py 0 cfg/deform.json deform_dataset`
+ - `python3 charts/create_chart_uv.py`
+ -  Evaluation for UV prediction error:
+ - `python3 charts/create_heatmap.py 0 cfg/deform.json deform_dataset`
 ---
 ---
   
