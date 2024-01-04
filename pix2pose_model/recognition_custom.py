@@ -158,11 +158,9 @@ class pix2pose():
             image_array = img_pred_ori.astype(np.uint8)
 
             # Display the image using Matplotlib
-            plt.imshow(image_array)
-            plt.title('2D3D Corr Map')
-            plt.show()
-
-            print(self.obj_scale)
+            #plt.imshow(image_array)
+            #plt.title('2D3D Corr Map')
+            #plt.show()
 
             # Save the image with a random filename
             # random_filename = str(random.randint(100000, 999999))  # Generating a random 6-digit number
@@ -241,7 +239,8 @@ class pix2pose():
             if(n_pts_s <6):
                 return np.eye(3),np.array([0,0,0]),valid_mask,-1
             ret, rvec, tvec,inliers = cv2.solvePnPRansac(obj_pts_s, img_pts_s, self.camK,None,\
-                                      flags=cv2.SOLVEPNP_EPNP,reprojectionError=5,iterationsCount=100)
+                                      flags=cv2.SOLVEPNP_AP3P ,reprojectionError=18,iterationsCount=500, confidence=0.9999)
+            # SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_AP3P
             if(inliers is None):
                 return np.eye(3),np.array([0,0,0]),-1,-1
             else:

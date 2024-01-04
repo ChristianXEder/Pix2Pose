@@ -14,5 +14,7 @@
   "task_type":2,
   "cand_factor":2,
   "test_target":"test_targets_deform",
-  "target_obj": [1, 405, 809, 1213, 1617, 2021, 2425]
+  "target_obj": [1, 405, 809, 1213, 1617, 2021, 2425],
+  "model_scale":1,
+  "icp":0
 }
